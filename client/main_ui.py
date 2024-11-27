@@ -21,10 +21,14 @@ class WishUponABrickMain:
         self.filter_socket = self.context.socket(zmq.REQ)
         self.filter_socket.connect("tcp://localhost:5556")
 
+        self.search_socket = self.context.socket(zmq.REQ)
+        self.search_socket.connect("tcp://localhost:5557")
+
     def __del__(self):
         # Close sockets
         self.sort_socket.close()
         self.filter_socket.close()
+        self.search_socket.close()
         # Terminate context
         self.context.term()
 
@@ -118,6 +122,7 @@ class WishUponABrickMain:
                 5. 🗑️   Delete a LEGO set
                 6. 💎   Sort LEGO sets
                 7. 🎯   Filter LEGO sets
+                8. 🌐   Search LEGO set on web
                 0. ⬅️   Go back to home screen
                 """
             )
@@ -138,6 +143,8 @@ class WishUponABrickMain:
                 self.sort_lego_sets()
             elif user_choice == "7":
                 self.filter_lego_sets()
+            elif user_choice == "8":
+                self.search_lego_set()
             elif user_choice == "0":
                 break
             else:
@@ -282,6 +289,63 @@ class WishUponABrickMain:
                 print(f"[{set_number}] --- {set_details['set_name']}")
 
         input("\nPress 'Enter' to continue...")
+
+    def search_lego_set(self):
+        while True:
+            os.system("cls" if os.name == "nt" else "clear")
+
+            print(
+                """
+                Search LEGO Set on Web:
+                1. Search by LEGO Set Number
+                2. Search by LEGO Set Name
+                0. Go back
+                """
+            )
+
+            user_choice = input("Enter your choice: ").strip()
+
+            if user_choice == "1":
+                set_number = input("Enter LEGO Set Number: ").strip()
+                if set_number:
+                    self.search_socket.send_json(
+                        {"command": "search_by_number", "set_number": set_number}
+                    )
+                    response = self.search_socket.recv_json()
+
+                    if response["status"] == "success":
+                        print(f"\n✔️  {response["result"]}.")
+                        input("\nPress 'Enter' to continue...")
+                    else:
+                        print("Error:", response["message"])
+                        time.sleep(1)
+                else:
+                    print("Please enter a LEGO set number.")
+                    time.sleep(1)
+
+            elif user_choice == "2":
+                set_name = input("Enter LEGO Set Name: ").strip()
+                if set_name:
+                    self.search_socket.send_json(
+                        {"command": "search_by_name", "set_name": set_name}
+                    )
+                    response = self.search_socket.recv_json()
+
+                    if response["status"] == "success":
+                        print(f"\n✔️  {response["result"]}.")
+                        input("\nPress 'Enter' to continue...")
+                    else:
+                        print("Error:", response["message"])
+                        time.sleep(1)
+                else:
+                    print("Please enter a LEGO set name.")
+                    time.sleep(1)
+
+            elif user_choice == "0":
+                return
+            else:
+                print("Invalid choice...:( Please try again.")
+                time.sleep(1)
 
     def view_wishlist_screen(self):
         """
