@@ -24,11 +24,15 @@ class WishUponABrickMain:
         self.search_socket = self.context.socket(zmq.REQ)
         self.search_socket.connect("tcp://localhost:5557")
 
+        self.total_socket = self.context.socket(zmq.REQ)
+        self.total_socket.connect("tcp://localhost:5558")
+
     def __del__(self):
         # Close sockets
         self.sort_socket.close()
         self.filter_socket.close()
         self.search_socket.close()
+        self.total_socket.close()
         # Terminate context
         self.context.term()
 
@@ -123,6 +127,7 @@ class WishUponABrickMain:
                 6. 💎   Sort LEGO sets
                 7. 🎯   Filter LEGO sets
                 8. 🌐   Search LEGO set on web
+                9. 📊   Count LEGO sets totals
                 0. ⬅️   Go back to home screen
                 """
             )
@@ -145,6 +150,8 @@ class WishUponABrickMain:
                 self.filter_lego_sets()
             elif user_choice == "8":
                 self.search_lego_set()
+            elif user_choice == "9":
+                self.count_lego_totals()
             elif user_choice == "0":
                 break
             else:
@@ -339,6 +346,70 @@ class WishUponABrickMain:
                         time.sleep(1)
                 else:
                     print("Please enter a LEGO set name.")
+                    time.sleep(1)
+
+            elif user_choice == "0":
+                return
+            else:
+                print("Invalid choice...:( Please try again.")
+                time.sleep(1)
+
+    def count_lego_totals(self):
+        while True:
+            os.system("cls" if os.name == "nt" else "clear")
+
+            print(
+                """
+                Count LEGO Sets Totals:
+                1. Total Number of LEGO Sets
+                2. Total Cost of LEGO Sets
+                3. Total Number of Pieces
+                0. Go back
+                """
+            )
+
+            user_choice = input("Enter your choice: ").strip()
+
+            if user_choice == "1":
+                self.total_socket.send_json(
+                    {"command": "total_number_of_sets", "wishlist": self.wishlist}
+                )
+                response = self.total_socket.recv_json()
+
+                if response["status"] == "success":
+                    total_sets = response["total_sets"]
+                    print(f"\n📊  Total Number of LEGO Sets: {total_sets}")
+                    input("\nPress 'Enter' to continue...")
+                else:
+                    print("Error:", response["message"])
+                    time.sleep(1)
+
+            elif user_choice == "2":
+                self.total_socket.send_json(
+                    {"command": "total_cost_of_sets", "wishlist": self.wishlist}
+                )
+                response = self.total_socket.recv_json()
+
+                if response["status"] == "success":
+                    total_cost = response["total_cost"]
+                    print(f"\n📊  Total Cost of LEGO Sets: ${total_cost:.2f}")
+                    input("\nPress 'Enter' to continue...")
+                else:
+                    print("Error:", response["message"])
+                    time.sleep(1)
+
+            elif user_choice == "3":
+                self.total_socket.send_json(
+                    {"command": "total_pieces_of_sets", "wishlist": self.wishlist}
+                )
+                response = self.total_socket.recv_json()
+
+                if response["status"] == "success":
+                    total_pieces = response["total_pieces"]
+                    print(f"\n📊  Total Number of LEGO Pieces: {total_pieces}")
+                    input("\nPress 'Enter' to continue...")
+                else:
+                    print("Error:", response["message"])
                     time.sleep(1)
 
             elif user_choice == "0":
