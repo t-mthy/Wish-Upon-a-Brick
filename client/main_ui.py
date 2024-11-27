@@ -18,9 +18,13 @@ class WishUponABrickMain:
         self.sort_socket = self.context.socket(zmq.REQ)
         self.sort_socket.connect("tcp://localhost:5555")
 
+        self.filter_socket = self.context.socket(zmq.REQ)
+        self.filter_socket.connect("tcp://localhost:5556")
+
     def __del__(self):
         # Close sockets
         self.sort_socket.close()
+        self.filter_socket.close()
         # Terminate context
         self.context.term()
 
@@ -113,6 +117,7 @@ class WishUponABrickMain:
                 4. 🖊️   Edit a LEGO set
                 5. 🗑️   Delete a LEGO set
                 6. 💎   Sort LEGO sets
+                7. 🎯   Filter LEGO sets
                 0. ⬅️   Go back to home screen
                 """
             )
@@ -131,6 +136,8 @@ class WishUponABrickMain:
                 self.delete_lego_set_screen()
             elif user_choice == "6":
                 self.sort_lego_sets()
+            elif user_choice == "7":
+                self.filter_lego_sets()
             elif user_choice == "0":
                 break
             else:
@@ -193,6 +200,86 @@ class WishUponABrickMain:
             print(
                 f"[{set_number}] --- {set_details['set_name']}, ${set_details['set_price']}"
             )
+
+        input("\nPress 'Enter' to continue...")
+
+    def filter_lego_sets(self):
+        while True:
+            os.system("cls" if os.name == "nt" else "clear")
+
+            print(
+                """
+                Filter LEGO Sets:
+                1. Filter by Minimum Age Requirement
+                2. Filter by Minimum Piece Count
+                0. Go back
+                """
+            )
+
+            user_choice = input("Enter your choice: ").strip()
+
+            if user_choice == "1":
+                min_age_str = input("Enter minimum age: ").strip()
+                try:
+                    min_age = int(min_age_str)
+                    self.filter_socket.send_json(
+                        {
+                            "command": "filter_by_age",
+                            "wishlist": self.wishlist,
+                            "min_age": min_age,
+                        }
+                    )
+                    response = self.filter_socket.recv_json()
+
+                    if response["status"] == "success":
+                        filtered_wishlist = response["wishlist"]
+                        self.display_filtered_wishlist(filtered_wishlist)
+                    else:
+                        print("Error:", response["message"])
+                        time.sleep(1)
+                except ValueError:
+                    print("Invalid age input. Please enter a number.")
+                    time.sleep(1)
+
+            elif user_choice == "2":
+                min_pieces_str = input("Enter minimum piece count: ").strip()
+                try:
+                    min_pieces = int(min_pieces_str)
+                    self.filter_socket.send_json(
+                        {
+                            "command": "filter_by_pieces",
+                            "wishlist": self.wishlist,
+                            "min_pieces": min_pieces,
+                        }
+                    )
+                    response = self.filter_socket.recv_json()
+
+                    if response["status"] == "success":
+                        filtered_wishlist = response["wishlist"]
+                        self.display_filtered_wishlist(filtered_wishlist)
+                    else:
+                        print("Error:", response["message"])
+                        time.sleep(1)
+                except ValueError:
+                    print("Invalid piece count input. Please enter a number.")
+                    time.sleep(1)
+
+            elif user_choice == "0":
+                return
+            else:
+                print("Invalid choice...:( Please try again.")
+                time.sleep(1)
+
+    def display_filtered_wishlist(self, filtered_wishlist):
+        os.system("cls" if os.name == "nt" else "clear")
+
+        if not filtered_wishlist:
+            print("No LEGO sets match the filter criteria.")
+        else:
+            print("Filtered LEGO sets result:\n")
+
+            for set_number, set_details in filtered_wishlist.items():
+                print(f"[{set_number}] --- {set_details['set_name']}")
 
         input("\nPress 'Enter' to continue...")
 
