@@ -1,5 +1,6 @@
 import os
 import time
+import zmq
 
 
 class WishUponABrickMain:
@@ -9,6 +10,19 @@ class WishUponABrickMain:
         """
         self.wishlist = {}
         self.seed_example_data()
+
+        # ZeroMQ setup
+        self.context = zmq.Context()
+
+        # Sockets to microservices
+        self.sort_socket = self.context.socket(zmq.REQ)
+        self.sort_socket.connect("tcp://localhost:5555")
+
+    def __del__(self):
+        # Close sockets
+        self.sort_socket.close()
+        # Terminate context
+        self.context.term()
 
     def seed_example_data(self):
         """
@@ -98,6 +112,7 @@ class WishUponABrickMain:
                 3. ⚡  Quick-add a LEGO set
                 4. 🖊️   Edit a LEGO set
                 5. 🗑️   Delete a LEGO set
+                6. 💎   Sort LEGO sets
                 0. ⬅️   Go back to home screen
                 """
             )
@@ -114,11 +129,72 @@ class WishUponABrickMain:
                 self.edit_lego_set_screen()
             elif user_choice == "5":
                 self.delete_lego_set_screen()
+            elif user_choice == "6":
+                self.sort_lego_sets()
             elif user_choice == "0":
                 break
             else:
                 print("Invalid choice...:( Please try again.")
                 time.sleep(1)
+
+    def sort_lego_sets(self):
+        while True:
+            os.system("cls" if os.name == "nt" else "clear")
+
+            print(
+                """
+                Sort LEGO Sets:
+                1. Sort by Price (Low to High)
+                2. Sort by Price (High to Low)
+                0. Go back
+                """
+            )
+
+            user_choice = input("Enter your choice: ").strip()
+
+            if user_choice == "1":
+                self.sort_socket.send_json(
+                    {"command": "sort_low_to_high", "wishlist": self.wishlist}
+                )
+                response = self.sort_socket.recv_json()
+
+                if response["status"] == "success":
+                    sorted_wishlist = response["wishlist"]
+                    self.display_sorted_wishlist(sorted_wishlist)
+                else:
+                    print("Error:", response["message"])
+                    time.sleep(1)
+
+            elif user_choice == "2":
+                self.sort_socket.send_json(
+                    {"command": "sort_high_to_low", "wishlist": self.wishlist}
+                )
+                response = self.sort_socket.recv_json()
+
+                if response["status"] == "success":
+                    sorted_wishlist = response["wishlist"]
+                    self.display_sorted_wishlist(sorted_wishlist)
+                else:
+                    print("Error:", response["message"])
+                    time.sleep(1)
+
+            elif user_choice == "0":
+                return
+            else:
+                print("Invalid choice...:( Please try again.")
+                time.sleep(1)
+
+    def display_sorted_wishlist(self, sorted_wishlist):
+        os.system("cls" if os.name == "nt" else "clear")
+
+        print("Sorted LEGO sets result:\n")
+
+        for set_number, set_details in sorted_wishlist.items():
+            print(
+                f"[{set_number}] --- {set_details['set_name']}, ${set_details['set_price']}"
+            )
+
+        input("\nPress 'Enter' to continue...")
 
     def view_wishlist_screen(self):
         """
@@ -265,9 +341,7 @@ class WishUponABrickMain:
             for set_number, set_details in self.wishlist.items():
                 print(f"[{set_number}] --- {set_details['set_name']}")
 
-            user_set_number = input(
-                "\nEnter a LEGO set number to edit: "
-            ).strip()
+            user_set_number = input("\nEnter a LEGO set number to edit: ").strip()
 
             if user_set_number in self.wishlist:
                 self.edit_lego_set(user_set_number)
@@ -290,9 +364,7 @@ class WishUponABrickMain:
                 """
             )
 
-            user_choice = input(
-                "\nEnter 1 to continue, or 0 to go back: "
-            ).strip()
+            user_choice = input("\nEnter 1 to continue, or 0 to go back: ").strip()
 
             if user_choice == "1":
                 break
@@ -348,9 +420,7 @@ class WishUponABrickMain:
             for set_number, set_details in self.wishlist.items():
                 print(f"[{set_number}] --- {set_details['set_name']}")
 
-            user_set_number = input(
-                "\nEnter a LEGO set number to delete: "
-            ).strip()
+            user_set_number = input("\nEnter a LEGO set number to delete: ").strip()
 
             if user_set_number in self.wishlist:
                 self.delete_lego_set(user_set_number)
@@ -373,9 +443,7 @@ class WishUponABrickMain:
                 """
             )
 
-            user_choice = input(
-                "\nEnter 1 to continue, or 0 to go back: "
-            ).strip()
+            user_choice = input("\nEnter 1 to continue, or 0 to go back: ").strip()
 
             if user_choice == "1":
                 break
